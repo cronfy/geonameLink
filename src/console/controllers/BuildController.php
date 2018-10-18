@@ -7,10 +7,9 @@ use cronfy\cdek\common\models\CdekCity;
 use cronfy\cdek\common\models\CdekCityDTO;
 use cronfy\env\Env;
 use cronfy\geoname\common\models\GeonameDTO;
-use cronfy\geoname\common\models\sqlite\Geoname;
+use cronfy\geonameLink\common\misc\GeonameSelections;
 use cronfy\geonameLink\common\misc\Service;
 use Yii;
-use yii\db\ActiveQuery;
 
 /**
  * Created by PhpStorm.
@@ -91,19 +90,20 @@ class BuildController extends \yii\console\Controller
      */
     protected function iterateSelection() {
         $corrector = $this->correctorSelection();
+        $selections = $this->getGeonamesSelections();
 
-        $iterateIterators = function () {
-            yield $this->iterateCountryPopulatedLocations('RU');
-            yield $this->iteratePlacesWithinSpb();
-            yield $this->iterateLenOblast();
-            yield $this->iterateLenOblastManual();
-            yield $this->iteratePlacesWithinMoscow();
-            yield $this->iterateMoscowOblast();
-            yield $this->iterateCrimea();
-            yield $this->iterateCountryPopulatedLocations('AM'); // Армения
-            yield $this->iterateCountryPopulatedLocations('BY'); // Белору́ссия
-            yield $this->iterateCountryPopulatedLocations('KZ'); // Казахстан
-            yield $this->iterateCountryPopulatedLocations('KG'); // Киргизия
+        $iterateIterators = function () use ($selections) {
+            yield $selections->countryPopulatedLocations('RU');
+            yield $selections->spbWithin();
+            yield $selections->lenOblast();
+            yield $selections->lenOblastManual();
+            yield $selections->moscowWithin();
+            yield $selections->moscowOblast();
+            yield $selections->crimea();
+            yield $selections->countryPopulatedLocations('AM'); // Армения
+            yield $selections->countryPopulatedLocations('BY'); // Белоруссия
+            yield $selections->countryPopulatedLocations('KZ'); // Казахстан
+            yield $selections->countryPopulatedLocations('KG'); // Киргизия
         };
 
         foreach ($iterateIterators() as $iterator) {
@@ -169,34 +169,11 @@ class BuildController extends \yii\console\Controller
         $path = __DIR__ . '/../../common/data/crimea-geoname-ids.php';
         $data = require ($path);
 
-        foreach ($this->iterateCrimeaGeonames() as $geoname) {
+        foreach ($this->getGeonamesSelections()->crimea() as $geoname) {
             $data[] = $geoname->geonameid;
         }
 
         file_put_contents($path, "<?php\n\nreturn " . var_export($data, 1) . ";\n");
-    }
-
-    /**
-     * @return Geoname[]
-     */
-    protected function iterateCrimea() {
-        $sevastopolGeonameId = 694423;
-        $crimeaGeonameId = 703883;
-
-        $geonameService = $this->getGeonamesService();
-        foreach ($this->iterateUaPopulatedLocations() as $geoname) {
-            /** @var GeonameDTO $geoname */
-
-            if ($geoname->geonameid == $sevastopolGeonameId) {
-                yield $geoname;
-            }
-
-            $regionGeoname = $geonameService->getRegionByGeoname($geoname);
-
-            if ($regionGeoname->geonameid == $crimeaGeonameId) {
-                yield $geoname;
-            }
-        }
     }
 
     protected function overrideCdek() {
@@ -776,134 +753,19 @@ class BuildController extends \yii\console\Controller
         return Yii::$app->getModule('geoname')->getGeonamesService();
     }
 
-    protected function iterateCountryPopulatedLocations($countryIso) {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country($countryIso)
-            ->populatedLocations()
-            ->population(15000)
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
+    protected $_geonamesSelections;
     /**
-     * @param ActiveQuery $query
-     * @param callable|null $filter
-     * @return GeonameDTO[]
+     * @return GeonameSelections
      */
-    public function iterateGeonamesQuery(ActiveQuery $query, callable $filter = null) {
-        foreach ($query->batch(100) as $batch) {
-            foreach ($batch as $geoname) {
-                /** @var Geoname $geoname */
-                if ($filter && !$filter($geoname)) {
-                    continue;
-                }
-
-                yield $geoname->getDto();
-            }
+    protected function getGeonamesSelections() {
+        if (!$this->_geonamesSelections) {
+            $this->_geonamesSelections = new GeonameSelections();
+            $this->_geonamesSelections->geonamesService = $this->getGeonamesService();
         }
+
+        return $this->_geonamesSelections;
     }
 
-    protected function iterateUaPopulatedLocations() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country('UA')
-            ->populatedLocations()
-            ->population(15000)
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
-    public function iteratePlacesWithinSpb() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country('RU')
-            ->populatedLocations()
-            ->population(7000)
-            // Санкт-Петербург (населенные пункты внутри Спб (по geonames), например, Зеленогорск)
-            ->andWhere(['admin1_code' => 66])
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
-    public function iterateLenOblast() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country('RU')
-            ->populatedLocations()
-            ->population(7000)
-            // Ленинградская область
-            ->andWhere(['admin1_code' => 42])
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
-    public function iterateLenOblastManual() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $geonameIds = [
-            546213, // Янино-1
-            469087, // Янино-2
-            824070, // Бугры
-            539839, // Кудрово
-        ];
-
-        $query = $countryRepository->getFindQuery()
-            ->andWhere(['geonameid' => $geonameIds])
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
-    public function iteratePlacesWithinMoscow() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country('RU')
-            ->populatedLocations()
-            ->population(7000)
-            // Москва (населенные пункты внутри Москвы (по geonames), например, Зеленоград)
-            ->andWhere(['admin1_code' => 48])
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
-
-    public function iterateMoscowOblast() {
-        $service = $this->getGeonamesService();
-
-        $countryRepository = $service->getCountryGeonamesSqliteRepository();
-
-        $query = $countryRepository->getFindQuery()
-            ->country('RU')
-            ->populatedLocations()
-            ->population(7000)
-            // Московская область
-            ->andWhere(['admin1_code' => 47])
-        ;
-
-        return $this->iterateGeonamesQuery($query);
-    }
 
 
 }
