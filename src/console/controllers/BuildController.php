@@ -326,6 +326,9 @@ class BuildController extends \yii\console\Controller
             1526970 => [
                 'cdekCityCode' => 4582,
             ],
+            469087 => [
+                'cdekCityCode' => 14727, // Янино-2, не находится из-за дефиса
+            ],
 
 
         ];
@@ -856,8 +859,15 @@ class BuildController extends \yii\console\Controller
 
         $countryRepository = $service->getCountryGeonamesSqliteRepository();
 
+        $geonameIds = [
+            546213, // Янино-1
+            469087, // Янино-2
+            824070, // Бугры
+            539839, // Кудрово
+        ];
+
         $query = $countryRepository->getFindQuery()
-            ->andWhere(['geonameid' => 539839]) // Кудрово, лен. область
+            ->andWhere(['geonameid' => $geonameIds])
         ;
 
         return $this->iterateGeonamesQuery($query);
