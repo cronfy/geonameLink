@@ -5126,16 +5126,6 @@ return array (
     'skipped' => true,
     'skipReason' => 'manually excluded',
   ),
-  8521440 => 
-  array (
-    'skipped' => true,
-    'skipReason' => 'no ru name',
-  ),
-  8521441 => 
-  array (
-    'skipped' => true,
-    'skipReason' => 'no ru name',
-  ),
   515558 => 
   array (
     'skipped' => true,
@@ -6065,5 +6055,15 @@ return array (
   array (
     'CountryCode' => 1,
     'ID' => 1291,
+  ),
+  8521440 => 
+  array (
+    'CountryCode' => 1,
+    'ID' => 1103,
+  ),
+  8521441 => 
+  array (
+    'CountryCode' => 1,
+    'ID' => 205,
   ),
 );
