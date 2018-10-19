@@ -27,6 +27,9 @@ class BuildController extends \yii\console\Controller
         return Yii::$app->getModule('cdek');
     }
 
+    /**
+     * @deprecated use GeonamesSelections
+     */
     protected function correctorSelection() {
         $correct = [
             469707 => [
@@ -127,6 +130,8 @@ class BuildController extends \yii\console\Controller
             537345 => 'Дыгулыбгей',
             608679 => 'Кандыагаш', // geonames не дает поправить
             610611 => 'Актобе', // geonames не дает поправить
+            8521440 => 'Дзержинский', // не было имени
+            8521441 => 'Королёв', // не было имени
         ];
 
         // два аргумента - потому что корректор может скорректировать на null.

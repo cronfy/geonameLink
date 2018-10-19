@@ -8,6 +8,8 @@
 
 namespace cronfy\geonameLink;
 
+use cronfy\geonameLink\common\misc\Service;
+
 class BaseModule extends \yii\base\Module
 {
     public function getControllerPath()
@@ -19,6 +21,15 @@ class BaseModule extends \yii\base\Module
         // своим способом.
         $rc = new \ReflectionClass(get_class($this));
         return dirname($rc->getFileName()) . '/controllers';
+    }
+
+    protected $_service;
+    public function getService() {
+        if (!$this->_service) {
+            $this->_service = new Service();
+        }
+
+        return $this->_service;
     }
 
 }
