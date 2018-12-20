@@ -90,6 +90,7 @@ class GeonameSelections
             469087, // Янино-2
             824070, // Бугры
             539839, // Кудрово
+            542000, // Красное село
         ];
 
         $query = $countryRepository->getFindQuery()

@@ -6066,4 +6066,9 @@ return array (
     'CountryCode' => 1,
     'ID' => 205,
   ),
+  542000 => 
+  array (
+    'CountryCode' => 1,
+    'ID' => 1288,
+  ),
 );
